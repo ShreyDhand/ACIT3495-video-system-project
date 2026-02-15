@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Upload</title>
+</head>
+<body>
+  <h1>Upload Video</h1>
+
+  <p>
+    <a href="/index.html">Videos</a> |
+    <a href="/login.html">Login</a> |
+    <a href="/settings.html">Settings</a>
+  </p>
+
+  <label>Title</label><br/>
+  <input id="title" size="50" placeholder="My video title" /><br/><br/>
+
+  <label>Choose file</label><br/>
+  <input id="file" type="file" /><br/><br/>
+
+  <button id="uploadBtn">Upload</button>
+
+  <pre id="out"></pre>
+
+<script>
+  function base(key, fallback) {
+    return localStorage.getItem(key) || fallback;
+  }
+  const apiBase = () => base("apiBase", "http://localhost:5001");
+  const fileBase = () => base("fileBase", "http://localhost:5002");
+
+  function getToken() { return sessionStorage.getItem("token"); }
+
+  document.getElementById("uploadBtn").onclick = async () => {
+    const token = getToken();
+    if (!token) {
+      document.getElementById("out").textContent = "You must log in first (go to Login page).";
+      return;
+    }
+
+    const title = document.getElementById("title").value.trim();
+    const fileInput = document.getElementById("file");
+    if (!title) return document.getElementById("out").textContent = "Title is required.";
+    if (!fileInput.files.length) return document.getElementById("out").textContent = "Pick a file first.";
+
+    // 1) Upload file to File service
+    const form = new FormData();
+    form.append("file", fileInput.files[0]);
+
+    const upRes = await fetch(`${fileBase()}/upload`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: form
+    });
+
+    const upData = await upRes.json().catch(() => ({}));
+    if (!upRes.ok) {
+      document.getElementById("out").textContent = `Upload failed: ${upRes.status}\n${JSON.stringify(upData, null, 2)}`;
+      return;
+    }
+
+    // 2) Save metadata to Catalog
+    const metaRes = await fetch(`${apiBase()}/videos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ title, path: upData.path })
+    });
+
+    const metaData = await metaRes.json().catch(() => ({}));
+    if (!metaRes.ok) {
+      document.getElementById("out").textContent = `Metadata save failed: ${metaRes.status}\n${JSON.stringify(metaData, null, 2)}`;
+      return;
+    }
+
+  document.getElementById("out").textContent =
+    `Success!\nSaved video id=${metaData.id}\npath=${metaData.path}\n\nGo back to Videos to see it.`;
+
+    // redirect after success
+    setTimeout(() => window.location.href = "/index.html", 800);
+
+};
+</script>
+</body>
+</html>
+

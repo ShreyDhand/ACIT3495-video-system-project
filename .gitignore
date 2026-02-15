@@ -1,1 +1,7 @@
 .env
+mysql_data
+file_data
+__pycache__/
+*.pyc
+.DS_Store
+test.mp4

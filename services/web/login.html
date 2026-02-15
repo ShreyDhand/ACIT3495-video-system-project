@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Login</title>
+</head>
+<body>
+  <h1>Login</h1>
+
+  <p><a href="/settings.html">Settings</a> | <a href="/index.html">Videos</a></p>
+
+  <label>Username</label><br/>
+  <input id="username" value="demo" /><br/><br/>
+
+  <label>Password</label><br/>
+  <input id="password" type="password" value="demo123" /><br/><br/>
+
+  <button id="loginBtn">Login</button>
+  <button id="logoutBtn">Logout</button>
+
+  <pre id="out"></pre>
+
+<script>
+  function base(key, fallback) {
+    return localStorage.getItem(key) || fallback;
+  }
+  const authBase = () => base("authBase", "http://localhost:4000");
+
+  function setToken(token) { sessionStorage.setItem("token", token); }
+  function clearToken() { sessionStorage.removeItem("token"); }
+  function getToken() { return sessionStorage.getItem("token"); }
+
+  document.getElementById("loginBtn").onclick = async () => {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    const res = await fetch(`${authBase()}/login`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username, password})
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      document.getElementById("out").textContent = `Login failed: ${res.status}\n${JSON.stringify(data, null, 2)}`;
+      return;
+    }
+
+    setToken(data.token);
+    document.getElementById("out").textContent = `Logged in as ${data.user}\nToken saved in sessionStorage.`;
+  };
+
+  document.getElementById("logoutBtn").onclick = () => {
+    clearToken();
+    document.getElementById("out").textContent = "Logged out. Token cleared.";
+  };
+
+  // show current state
+  document.getElementById("out").textContent = getToken()
+    ? "Token exists in sessionStorage (you are logged in)."
+    : "No token in sessionStorage (logged out).";
+</script>
+</body>
+</html>
+

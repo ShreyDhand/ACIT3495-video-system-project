@@ -1,0 +1,67 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: acit3495-mysql
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  auth:
+    build: ./services/auth
+    container_name: acit3495-auth
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "4000:4000"
+
+  file:
+    build: ./services/file
+    container_name: acit3495-file
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "5002:5000"
+    volumes:
+      - file_data:/data
+
+  catalog:
+    build: ./services/catalog
+    container_name: acit3495-catalog
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_HOST: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+
+  web:
+    build: ./services/web
+    container_name: acit3495-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth
+      - file
+      - catalog
+
+volumes:
+  mysql_data:
+  file_data:
