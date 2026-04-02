@@ -1,0 +1,136 @@
+# --- Auth Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: auth
+        image: 765222503695.dkr.ecr.us-west-2.amazonaws.com/acit3495-auth:latest
+        ports:
+        - containerPort: 4000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  ports:
+  - port: 4000
+  selector:
+    app: auth
+
+# --- Catalog Service ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+    spec:
+      containers:
+      - name: catalog
+        image: 765222503695.dkr.ecr.us-west-2.amazonaws.com/acit3495-catalog:latest
+        ports:
+        - containerPort: 5001
+        env:
+        - name: MYSQL_HOST
+          value: "mysql"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+spec:
+  ports:
+  - port: 5001
+  selector:
+    app: catalog
+
+# --- File Service ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: file
+  template:
+    metadata:
+      labels:
+        app: file
+    spec:
+      containers:
+      - name: file
+        image: 765222503695.dkr.ecr.us-west-2.amazonaws.com/acit3495-file:latest
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: file-service
+spec:
+  ports:
+  - port: 5000
+  selector:
+    app: file
+
+# --- Web Frontend Deployment ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: 765222503695.dkr.ecr.us-west-2.amazonaws.com/acit3495-web:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+---
+# --- Web Frontend Service (The Load Balancer) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: web
